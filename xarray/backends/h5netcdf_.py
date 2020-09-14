@@ -302,3 +302,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+def open_v2():
+    pass
