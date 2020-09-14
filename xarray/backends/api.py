@@ -18,6 +18,7 @@ from typing import (
 import numpy as np
 
 from .. import backends, coding, conventions
+import apiv2
 from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
@@ -433,6 +434,25 @@ def open_dataset(
             "xarray.set_options(file_cache_maxsize=...).",
             FutureWarning,
             stacklevel=2,
+        )
+
+    if engine in apiv2.ENGINES:
+        apiv2.open_dataset(
+            filename_or_obj,
+            group=group,
+            decode_cf=decode_cf,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            engine=engine,
+            chunks=chunks,
+            lock=lock,
+            cache=cache,
+            drop_variables=drop_variables,
+            backend_kwargs=backend_kwargs,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
 
     if mask_and_scale is None:
