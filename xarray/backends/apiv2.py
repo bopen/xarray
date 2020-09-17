@@ -143,20 +143,8 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
-    xr_decoders = {}
-    if mask_and_scale is None:
-        mask_and_scale = not engine == "pseudonetcdf"
 
+    xr_decoders = {}
     if not decode_cf:
         mask_and_scale = False
         decode_times = False
@@ -226,10 +214,5 @@ def open_dataset(
             ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
-
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds2.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
 
     return ds2
