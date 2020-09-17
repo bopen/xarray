@@ -1,5 +1,4 @@
 import os.path
-import warnings
 
 from pathlib import Path
 
@@ -10,9 +9,7 @@ from .common import AbstractDataStore
 from . import h5netcdf_
 
 
-ENGINES = {
-   "h5netcdf-experimental": h5netcdf_.open_v2
-}
+ENGINES = {"h5netcdf-experimental": h5netcdf_.open_v2}
 
 
 def _get_backend_cls(engine):
@@ -23,6 +20,7 @@ def _get_backend_cls(engine):
             "unrecognized engine for open_dataset: {}\n"
             "must be one of: {}".format(engine, list(ENGINES))
         )
+
 
 def open_dataset(
     filename_or_obj,
@@ -177,11 +175,7 @@ def open_dataset(
         opener = _get_backend_cls(engine)
 
     with close_on_error(store):
-        ds = opener(
-            filename_or_obj,
-            **xr_decoders,
-            **backend_kwargs,
-            **extra_kwargs)
+        ds = opener(filename_or_obj, **xr_decoders, **backend_kwargs, **extra_kwargs)
 
         _protect_dataset_variables_inplace(ds, cache)
 
