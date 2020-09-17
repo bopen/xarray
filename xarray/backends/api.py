@@ -167,7 +167,7 @@ def _get_backend_cls(engine):
     except KeyError:
         raise ValueError(
             "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, list(ENGINES.keys()))
+            "must be one of: {}".format(engine, list(ENGINES))
         )
 
 
