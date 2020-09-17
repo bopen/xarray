@@ -11,7 +11,7 @@ from . import h5netcdf_
 
 
 ENGINES = {
-   # "h5netcdf": h5netcdf_.open_v2
+   "h5netcdf-experimental": h5netcdf_.open_v2
 }
 
 
