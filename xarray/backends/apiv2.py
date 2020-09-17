@@ -161,18 +161,15 @@ def open_dataset(
     if isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
 
-    if isinstance(filename_or_obj, AbstractDataStore):
-        store = filename_or_obj
-    else:
-        engine = _resolve_engine(engine, filename_or_obj)
-        extra_kwargs = {}
-        if engine in ["netcdf4", "h5netcdf"]:
-            extra_kwargs["group"] = group
-            extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
+    engine = _resolve_engine(engine, filename_or_obj)
+    extra_kwargs = {}
+    if engine in ["netcdf4", "h5netcdf"]:
+        extra_kwargs["group"] = group
+        extra_kwargs["lock"] = lock
+    elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+        extra_kwargs["lock"] = lock
 
-        opener = _get_backend_cls(engine)
+    opener = _get_backend_cls(engine)
 
     with close_on_error(store):
         ds = opener(filename_or_obj, **xr_decoders, **backend_kwargs, **extra_kwargs)
