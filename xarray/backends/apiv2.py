@@ -1,17 +1,13 @@
-import copy
-import os
-from pathlib import Path
-from .api import _protect_dataset_variables_inplace, _normalize_path, _resolve_engine
-from . import h5netcdf_
-from ..core.utils import close_on_error, is_remote_uri
-from .. import backends, coding, conventions
-
 import os.path
+import warnings
 
-from .. import conventions
+from pathlib import Path
 
 from ..core.dataset import Dataset
+from ..core.utils import close_on_error, is_remote_uri
+from .api import _protect_dataset_variables_inplace, _normalize_path, _resolve_engine
 from .common import AbstractDataStore
+from . import h5netcdf_
 
 
 ENGINES = {
@@ -147,7 +143,16 @@ def open_dataset(
     --------
     open_mfdataset
     """
-
+    if autoclose is not None:
+        warnings.warn(
+            "The autoclose argument is no longer used by "
+            "xarray.open_dataset() and is now ignored; it will be removed in "
+            "a future version of xarray. If necessary, you can control the "
+            "maximum number of simultaneous open files with "
+            "xarray.set_options(file_cache_maxsize=...).",
+            FutureWarning,
+            stacklevel=2,
+        )
     xr_decoders = {}
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
