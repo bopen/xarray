@@ -18,7 +18,6 @@ from typing import (
 import numpy as np
 
 from .. import backends, coding, conventions
-import apiv2
 from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
