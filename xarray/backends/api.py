@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     except ImportError:
         Delayed = None
 
+
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
@@ -306,6 +307,20 @@ def load_dataarray(filename_or_obj, **kwargs):
         return da.load()
 
 
+def _resolve_engine(engine, filename_or_obj):
+    if isinstance(filename_or_obj, str):
+        if engine is None:
+            engine = _get_default_engine(filename_or_obj, allow_remote=True)
+    else:
+        if engine not in [None, "scipy", "h5netcdf"]:
+            raise ValueError(
+                "can only read bytes or file-like objects "
+                "with engine='scipy' or 'h5netcdf'"
+            )
+        engine = _get_engine_from_magic_number(filename_or_obj)
+    return engine
+
+
 def open_dataset(
     filename_or_obj,
     group=None,
@@ -436,25 +451,6 @@ def open_dataset(
             stacklevel=2,
         )
 
-    if engine in apiv2.ENGINES:
-        apiv2.open_dataset(
-            filename_or_obj,
-            group=group,
-            decode_cf=decode_cf,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            engine=engine,
-            chunks=chunks,
-            lock=lock,
-            cache=cache,
-            drop_variables=drop_variables,
-            backend_kwargs=backend_kwargs,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
-
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
 
@@ -471,6 +467,47 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
     extra_kwargs = {}
+
+    if isinstance(filename_or_obj, Path):
+        filename_or_obj = str(filename_or_obj)
+    if isinstance(filename_or_obj, str):
+        filename_or_obj = _normalize_path(filename_or_obj)
+
+    if isinstance(filename_or_obj, AbstractDataStore):
+        store = filename_or_obj
+    else:
+        from . import apiv2
+        engine = _resolve_engine(engine, filename_or_obj)
+
+        if engine in apiv2.ENGINES:
+            ds = apiv2.open_dataset(
+                            filename_or_obj,
+                            group=group,
+                            decode_cf=decode_cf,
+                            mask_and_scale=mask_and_scale,
+                            decode_times=decode_times,
+                            concat_characters=concat_characters,
+                            decode_coords=decode_coords,
+                            engine=engine,
+                            chunks=chunks,
+                            lock=lock,
+                            cache=cache,
+                            drop_variables=drop_variables,
+                            backend_kwargs=backend_kwargs,
+                            use_cftime=use_cftime,
+                            decode_timedelta=decode_timedelta,
+                        )
+            return ds
+
+        else:
+            if engine in ["netcdf4", "h5netcdf"]:
+                extra_kwargs["group"] = group
+                extra_kwargs["lock"] = lock
+            elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+                extra_kwargs["lock"] = lock
+
+            opener = _get_backend_cls(engine)
+            store = opener(filename_or_obj, **backend_kwargs, **extra_kwargs)
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -518,33 +555,6 @@ def open_dataset(
 
         return ds2
 
-    if isinstance(filename_or_obj, Path):
-        filename_or_obj = str(filename_or_obj)
-
-    if isinstance(filename_or_obj, AbstractDataStore):
-        store = filename_or_obj
-    else:
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = _normalize_path(filename_or_obj)
-
-            if engine is None:
-                engine = _get_default_engine(filename_or_obj, allow_remote=True)
-
-        else:
-            if engine not in [None, "scipy", "h5netcdf"]:
-                raise ValueError(
-                    "can only read bytes or file-like objects "
-                    "with engine='scipy' or 'h5netcdf'"
-                )
-            engine = _get_engine_from_magic_number(filename_or_obj)
-        if engine in ["netcdf4", "h5netcdf"]:
-            extra_kwargs["group"] = group
-            extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
-
-        opener = _get_backend_cls(engine)
-        store = opener(filename_or_obj, **backend_kwargs, **extra_kwargs)
 
     with close_on_error(store):
         ds = maybe_decode_store(store)
