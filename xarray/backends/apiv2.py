@@ -11,7 +11,7 @@ from . import h5netcdf_
 
 
 ENGINES = {
-   # "h5netcdf": h5netcdf_.open_v2
+   "h5netcdf": h5netcdf_.open_h5necdf_
 }
 
 
@@ -153,7 +153,7 @@ def open_dataset(
             FutureWarning,
             stacklevel=2,
         )
-    xr_decoders = {}
+
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
 
@@ -170,62 +170,70 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
+    xr_decoders = dict(
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
+    )
+
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
     if isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
 
-    if isinstance(filename_or_obj, AbstractDataStore):
-        store = filename_or_obj
-    else:
-        engine = _resolve_engine(engine, filename_or_obj)
-        extra_kwargs = {}
-        if engine in ["netcdf4", "h5netcdf"]:
-            extra_kwargs["group"] = group
-            extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
+    engine = _resolve_engine(engine, filename_or_obj)
+    extra_kwargs = {}
+    if engine in ["netcdf4", "h5netcdf"]:
+        extra_kwargs["group"] = group
+        extra_kwargs["lock"] = lock
+    elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+        extra_kwargs["lock"] = lock
 
-        opener = _get_backend_cls(engine)
+    opener = _get_backend_cls(engine)
 
-    with close_on_error(store):
-        ds = opener(
-            filename_or_obj,
-            **xr_decoders,
-            **backend_kwargs,
-            **extra_kwargs)
+    # TODO: fix missing with...
+    ds = opener(
+        filename_or_obj,
+        xr_decoders,
+        **backend_kwargs,
+        **extra_kwargs
+    )
 
-        _protect_dataset_variables_inplace(ds, cache)
+    _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None:
-            from dask.base import tokenize
+    if chunks is not None:
+        from dask.base import tokenize
 
-            # if passed an actual file path, augment the token with
-            # the file modification time
-            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-                mtime = os.path.getmtime(filename_or_obj)
-            else:
-                mtime = None
-            token = tokenize(
-                filename_or_obj,
-                mtime,
-                group,
-                decode_cf,
-                mask_and_scale,
-                decode_times,
-                concat_characters,
-                decode_coords,
-                engine,
-                chunks,
-                drop_variables,
-                use_cftime,
-                decode_timedelta,
-            )
-            name_prefix = "open_dataset-%s" % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-            ds2._file_obj = ds._file_obj
+        # if passed an actual file path, augment the token with
+        # the file modification time
+        if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+            mtime = os.path.getmtime(filename_or_obj)
         else:
-            ds2 = ds
+            mtime = None
+        token = tokenize(
+            filename_or_obj,
+            mtime,
+            group,
+            decode_cf,
+            mask_and_scale,
+            decode_times,
+            concat_characters,
+            decode_coords,
+            engine,
+            chunks,
+            drop_variables,
+            use_cftime,
+            decode_timedelta,
+        )
+        name_prefix = "open_dataset-%s" % token
+        ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+        ds2._file_obj = ds._file_obj
+    else:
+        ds2 = ds
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds2.encoding:

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
+XARRAY_EXPERIMENTAL_API = 1
 
 ENGINES = {
     "netcdf4": backends.NetCDF4DataStore.open,
@@ -476,7 +477,7 @@ def open_dataset(
         from . import apiv2
         engine = _resolve_engine(engine, filename_or_obj)
 
-        if engine in apiv2.ENGINES:
+        if XARRAY_EXPERIMENTAL_API and (engine in apiv2.ENGINES):
             ds = apiv2.open_dataset(
                             filename_or_obj,
                             group=group,
@@ -495,7 +496,6 @@ def open_dataset(
                             decode_timedelta=decode_timedelta,
                         )
             return ds
-
         else:
             if engine in ["netcdf4", "h5netcdf"]:
                 extra_kwargs["group"] = group
@@ -551,7 +551,6 @@ def open_dataset(
             ds2 = ds
 
         return ds2
-
 
     with close_on_error(store):
         ds = maybe_decode_store(store)

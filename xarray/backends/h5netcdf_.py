@@ -3,7 +3,9 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
+from .. import conventions
 from ..core import indexing
+from ..core.dataset import Dataset
 from ..core.utils import FrozenDict, is_remote_uri
 from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
@@ -304,5 +306,30 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def open_v2():
-    pass
+def open_h5necdf_(
+        filename_or_obj,
+        xr_decoders,
+        **kwargs
+):
+
+    store = H5NetCDFStore.open(filename_or_obj, **kwargs)
+    vars, attrs = store.load()
+    extra_coords = set()
+    file_obj = store
+    encoding = store.get_encoding()
+
+
+    vars, attrs, coord_names = conventions.decode_cf_variables(
+        vars,
+        attrs,
+        **xr_decoders,
+    )
+
+    ds = Dataset(vars, attrs=attrs)
+    ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
+    ds._file_obj = file_obj
+    ds.encoding = encoding
+
+    return ds
+
+
