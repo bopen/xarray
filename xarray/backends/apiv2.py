@@ -26,6 +26,7 @@ def _get_backend_cls(engine):
             "must be one of: {}".format(engine, list(ENGINES))
         )
 
+
 def open_dataset(
     filename_or_obj,
     group=None,
@@ -145,16 +146,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
 
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"

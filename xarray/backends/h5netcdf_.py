@@ -331,5 +331,3 @@ def open_h5necdf_(
         ds.encoding = encoding
 
     return ds
-
-

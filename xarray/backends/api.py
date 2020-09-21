@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
+
 XARRAY_EXPERIMENTAL_API = 1
 
 ENGINES = {
@@ -163,6 +164,7 @@ def _get_default_engine(path, allow_remote=False):
 
 
 def _get_backend_cls(engine):
+    """Select open_dataset method based on current engine"""
     try:
         return ENGINES[engine]
     except KeyError:
@@ -477,7 +479,7 @@ def open_dataset(
         from . import apiv2
         engine = _resolve_engine(engine, filename_or_obj)
 
-        if XARRAY_EXPERIMENTAL_API and (engine in apiv2.ENGINES):
+        if engine in apiv2.ENGINES:
             ds = apiv2.open_dataset(
                             filename_or_obj,
                             group=group,
@@ -496,6 +498,7 @@ def open_dataset(
                             decode_timedelta=decode_timedelta,
                         )
             return ds
+
         else:
             if engine in ["netcdf4", "h5netcdf"]:
                 extra_kwargs["group"] = group
@@ -551,6 +554,7 @@ def open_dataset(
             ds2 = ds
 
         return ds2
+
 
     with close_on_error(store):
         ds = maybe_decode_store(store)
