@@ -7,11 +7,13 @@ from ..core.dataset import Dataset
 from ..core.utils import close_on_error, is_remote_uri
 from .api import _protect_dataset_variables_inplace, _normalize_path, _resolve_engine
 from .common import AbstractDataStore
-from . import h5netcdf_
+from . import h5netcdf_, cfgrib_
 
 
 ENGINES = {
-   "h5netcdf": h5netcdf_.open_h5necdf_
+   "h5netcdf": h5netcdf_.open_h5necdf_,
+    "cfgrib": cfgrib_.open_cfgrib_,
+
 }
 
 
@@ -195,7 +197,6 @@ def open_dataset(
 
     opener = _get_backend_cls(engine)
 
-    # TODO: fix missing with...
     ds = opener(
         filename_or_obj,
         xr_decoders,

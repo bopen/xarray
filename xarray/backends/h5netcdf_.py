@@ -6,7 +6,7 @@ import numpy as np
 from .. import conventions
 from ..core import indexing
 from ..core.dataset import Dataset
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.utils import FrozenDict, is_remote_uri, close_on_error
 from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
@@ -311,24 +311,24 @@ def open_h5necdf_(
         xr_decoders,
         **kwargs
 ):
-
     store = H5NetCDFStore.open(filename_or_obj, **kwargs)
-    vars, attrs = store.load()
-    extra_coords = set()
-    file_obj = store
-    encoding = store.get_encoding()
 
+    with close_on_error(store):
+        vars, attrs = store.load()
+        extra_coords = set()
+        file_obj = store
+        encoding = store.get_encoding()
 
-    vars, attrs, coord_names = conventions.decode_cf_variables(
-        vars,
-        attrs,
-        **xr_decoders,
-    )
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            **xr_decoders,
+        )
 
-    ds = Dataset(vars, attrs=attrs)
-    ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
-    ds._file_obj = file_obj
-    ds.encoding = encoding
+        ds = Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
 
     return ds
 

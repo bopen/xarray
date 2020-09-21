@@ -1,8 +1,11 @@
 import numpy as np
 
+from .. import conventions
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict
+from ..core import dataset
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
+
 from .common import AbstractDataStore, BackendArray
 from .locks import SerializableLock, ensure_lock
 
@@ -69,3 +72,33 @@ class CfGribDataStore(AbstractDataStore):
         dims = self.get_dimensions()
         encoding = {"unlimited_dims": {k for k, v in dims.items() if v is None}}
         return encoding
+
+
+def open_cfgrib_(
+        filename_or_obj,
+        xr_decoders,
+        **kwargs
+    ):
+    store = CfGribDataStore(filename_or_obj, **kwargs)
+
+    with close_on_error(store):
+        vars, attrs = store.load()
+        extra_coords = set()
+        file_obj = store
+        encoding = store.get_encoding()
+
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            **xr_decoders,
+        )
+
+        ds = dataset.Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
+
+    return ds
+
+
+
