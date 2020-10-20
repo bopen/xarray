@@ -19,7 +19,7 @@ ENGINES = {
 def dataset_from_backend_dataset(
     ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
-    if chunks == 'auto':
+    if chunks == "auto":
         chunks = {}
 
     if not (isinstance(chunks, (int, dict)) or chunks is None):
@@ -47,6 +47,7 @@ def dataset_from_backend_dataset(
     else:
         if engine != "zarr":
             from dask.base import tokenize
+
             token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
