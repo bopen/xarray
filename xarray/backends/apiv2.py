@@ -19,11 +19,6 @@ ENGINES = {
 def dataset_from_backend_dataset(
     ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
-        )
 
     _protect_dataset_variables_inplace(ds, cache)
     if chunks is None:
@@ -172,6 +167,12 @@ def open_dataset(
     --------
     open_mfdataset
     """
+
+    if not (isinstance(chunks, (int, dict)) or (chunks is None) or chunks == "auto"):
+        raise ValueError(
+            "chunks must be an int, dict, 'auto', or None. "
+            "Instead found %s. " % chunks
+        )
 
     if cache is None:
         cache = chunks is None
