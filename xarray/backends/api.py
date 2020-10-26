@@ -944,8 +944,12 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths]
-    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    try:
+        datasets = [open_(p, **open_kwargs) for p in paths]
+        file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    except ImportError:
+        raise ModuleNotFoundError("Function open_mfdataset() requires dask to be installed")
+
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
