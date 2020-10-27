@@ -949,7 +949,6 @@ def open_mfdataset(
 
     datasets = [open_(p, **open_kwargs) for p in paths]
     file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
-
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
