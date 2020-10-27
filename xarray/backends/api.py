@@ -904,6 +904,11 @@ def open_mfdataset(
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
+    try:
+        import dask
+    except ImportError:
+        raise ModuleNotFoundError("Function open_mfdataset() requires dask to be installed")
+
     if isinstance(paths, str):
         if is_remote_uri(paths):
             raise ValueError(
@@ -933,8 +938,6 @@ def open_mfdataset(
     )
 
     if parallel:
-        import dask
-
         # wrap the open_dataset, getattr, and preprocess with delayed
         open_ = dask.delayed(open_dataset)
         getattr_ = dask.delayed(getattr)
@@ -944,11 +947,8 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    try:
-        datasets = [open_(p, **open_kwargs) for p in paths]
-        file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
-    except ImportError:
-        raise ModuleNotFoundError("Function open_mfdataset() requires dask to be installed")
+    datasets = [open_(p, **open_kwargs) for p in paths]
+    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
 
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
