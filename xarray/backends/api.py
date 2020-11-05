@@ -435,8 +435,17 @@ def open_dataset(
     if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
         kwargs = locals().copy()
         from . import apiv2
+        import sys
+        import entrypoints
 
-        if engine in apiv2.ENGINES:
+        path = sys.path.copy()
+        path = set(path)
+
+        try:
+            entrypoints.get_single("xarray.backends", engine, path=path)
+        except Exception:
+            "continue"
+        else:
             return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:
