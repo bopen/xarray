@@ -1,19 +1,29 @@
 import os
 
 from ..core.utils import is_remote_uri
-from . import cfgrib_, h5netcdf_, zarr
+from . import zarr
 from .api import (
     _autodetect_engine,
-    _get_backend_cls,
     _normalize_path,
     _protect_dataset_variables_inplace,
 )
 
-ENGINES = {
-    "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
-    "zarr": zarr.open_backend_dataset_zarr,
-    "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
-}
+
+def _get_backend_cls(engine):
+    """Select open_dataset method based on current engine"""
+    import sys
+    import entrypoints
+
+    path = sys.path.copy()
+    path = set(path)
+    try:
+        return entrypoints.get_single("xarray.backends", engine, path=path).load()
+    except entrypoints.NoSuchEntryPoint:
+        all_entrypoints = entrypoints.get_group_named("xarray.backends", path=path)
+        raise ValueError(
+            "unrecognized engine for open_dataset: {}\n"
+            "must be one of: {}".format(engine, list(all_entrypoints.keys()))
+        )
 
 
 def dataset_from_backend_dataset(
@@ -205,7 +215,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
+    open_backend_dataset = _get_backend_cls(engine)
     backend_ds = open_backend_dataset(
         filename_or_obj,
         **backend_kwargs,
