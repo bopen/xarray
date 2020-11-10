@@ -17,7 +17,7 @@ ENGINES = {
 }
 
 
-def get_mtime(filename_or_obj):
+def _get_mtime(filename_or_obj):
     # if passed an actual file path, augment the token with
     # the file modification time
     if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
@@ -27,6 +27,35 @@ def get_mtime(filename_or_obj):
     return mtime
 
 
+def _chunk_ds(
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    overwrite_encoded_chunks,
+    extra_tokens,
+):
+    from dask.base import tokenize
+
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
+    if isinstance(chunks, int):
+        chunks = dict.fromkeys(backend_ds.dims, chunks)
+
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            _get_chunk(name, var, chunks),
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
+    return backend_ds._replace(variables)
+
+
 def dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
@@ -34,33 +63,20 @@ def dataset_from_backend_dataset(
     chunks,
     cache,
     overwrite_encoded_chunks,
-    extra_tokens,
+    **extra_tokens,
 ):
-
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
         ds = backend_ds
     else:
-        from dask.base import tokenize
-
-        mtime = get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(backend_ds.dims, chunks)
-
-        variables = {
-            name: _maybe_chunk(
-                name,
-                var,
-                _get_chunk(name, var, chunks),
-                overwrite_encoded_chunks=overwrite_encoded_chunks,
-                name_prefix=name_prefix,
-                token=token,
-            )
-            for name, var in backend_ds.variables.items()
-        }
-        ds = backend_ds._replace(variables)
+        ds = _chunk_ds(
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            extra_tokens
+        )
 
     ds._file_obj = backend_ds._file_obj
 
@@ -184,14 +200,6 @@ def open_dataset(
     open_mfdataset
     """
 
-    if chunks == "auto":
-        chunks = {}
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
-        )
-
     if cache is None:
         cache = chunks is None
 
@@ -207,10 +215,11 @@ def open_dataset(
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
+    filtered_kwargs =  {k: v for k, v in kwargs.items() if v is not None}
     backend_ds = open_backend_dataset(
         filename_or_obj,
         **backend_kwargs,
-        **{k: v for k, v in kwargs.items() if v is not None},
+        **filtered_kwargs,
     )
     ds = dataset_from_backend_dataset(
         backend_ds,
@@ -219,7 +228,8 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
-        {**backend_kwargs, **kwargs},
+        **backend_kwargs,
+        **kwargs,
     )
 
     return ds

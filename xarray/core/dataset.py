@@ -375,28 +375,27 @@ def _check_chunks_compatibility(dim, chunks, chunk_spec):
 
 
 def _get_chunk(name, var, chunks):
-    if chunks == "auto":
-        chunks = {}
+    if chunks == "auto" or chunks is None:
+        return chunks
 
     preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
     if var.ndim == 1 and var.dims[0] == name:
         return preferred_chunks
 
     output_chunks = {}
-    if chunks is not None:
-        for dim in preferred_chunks:
-            if dim in chunks:
-                _check_chunks_compatibility(dim, chunks, preferred_chunks)
-                output_chunks[dim] = chunks[dim]
-            else:
-                output_chunks[dim] = preferred_chunks[dim]
+    for dim in preferred_chunks:
+        if dim in chunks:
+            _check_chunks_compatibility(dim, chunks, preferred_chunks)
+            output_chunks[dim] = chunks[dim]
+        else:
+            output_chunks[dim] = preferred_chunks[dim]
     return output_chunks
 
 
 def _maybe_chunk(
     name,
     var,
-    chunks=None,
+    chunks={},
     token=None,
     lock=None,
     name_prefix="xarray-",
@@ -404,7 +403,7 @@ def _maybe_chunk(
 ):
     from dask.base import tokenize
 
-    if chunks is not None:
+    if chunks is not None and chunks != "auto":
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
     if var.ndim:
         # when rechunking by different amounts, make sure dask names change
