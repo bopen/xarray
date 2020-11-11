@@ -26,6 +26,6 @@ for engine in ENGINES.values():
             ):
                 raise TypeError(
                     f'All the parameters in {engine["open_dataset"]!r} signature should be explicit. '
-                    "*args and **kwargs is not supported"
+                    "*args and **kwargs are not supported"
                 )
         engine["signature"] = set(parameters)
