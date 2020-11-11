@@ -48,7 +48,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
         )
-        ds =  backend_ds._replace(variables)
+        ds = backend_ds._replace(variables)
     ds._file_obj = backend_ds._file_obj
     return ds
 
@@ -74,12 +74,12 @@ def dataset_from_backend_dataset(
         ds = backend_ds
     else:
         ds = _chunk_ds(
-                backend_ds,
-                filename_or_obj,
-                engine,
-                chunks,
-                overwrite_encoded_chunks,
-                **extra_tokens,
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            **extra_tokens,
         )
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
@@ -260,7 +260,7 @@ def open_dataset(
         drop_variables=drop_variables,
         **decoders,
         **backend_kwargs,
-        **filtered_kwargs
+        **filtered_kwargs,
     )
     ds = dataset_from_backend_dataset(
         backend_ds,
