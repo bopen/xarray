@@ -4803,3 +4803,48 @@ def test_load_single_value_h5netcdf(tmp_path):
     ds.to_netcdf(tmp_path / "test.nc")
     with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
         ds2["test"][0].load()
+
+
+def test_chunking_api(tmp_path):
+    ds = xr.DataArray(
+        np.arange(80).reshape(20, 4),
+        dims=('x', 'y'),
+        coords={'x': np.arange(20), 'y': np.arange(4), 'z': ('x', np.arange(20))},
+        name='foo',
+    ).to_dataset()
+    ds['foo'].encoding['chunks'] = (5, 2)
+
+    ds.to_zarr(tmp_path / "test.zarr")
+    ds.to_netcdf(tmp_path / "test.nc")
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr')
+    ncdata = xr.open_dataset('test.nc')
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine="zarr", chunks="auto")
+    ncdata = xr.open_dataset('test.nc', chunks="auto")
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr', chunks={})
+    ncdata = xr.open_dataset('test.nc', chunks={"x": 5, "y": 2})
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr', chunks={"x": -1})
+    ncdata = xr.open_dataset('test.nc', chunks={"x": -1, "y": 2})
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr')
+    ncdata = xr.open_dataset('test.nc')
+    zarrdata.foo.chunk(chunks={"x": 10, "y": 2})
+    ncdata.foo.chunk(chunks={"x": 10, "y": 2})
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr', chunks=None)
+    ncdata = xr.open_dataset('test.nc', chunks=None)
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
+
+    zarrdata = xr.open_dataset('test.zarr', engine='zarr')
+    zarrdata.foo.chunk(chunks=None)
+    ncdata = xr.open_dataset('test.nc')
+    ncdata.foo.chunk(chunks=None)
+    xr.testing.assert_chunks_equal(zarrdata, ncdata)
