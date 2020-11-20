@@ -5,6 +5,7 @@ from functools import lru_cache
 
 import pkg_resources
 
+
 class BackendEntrypoint:
     __slots__ = ("open_dataset", "open_dataset_parameters")
 
@@ -18,9 +19,7 @@ def remove_duplicates(backend_entrypoints):
     # sort and group entrypoints by name
     key_name = lambda ep: ep.name
     backend_entrypoints = sorted(backend_entrypoints, key=key_name)
-    backend_entrypoints_grouped =itertools.groupby(
-        backend_entrypoints, key=key_name
-    )
+    backend_entrypoints_grouped = itertools.groupby(backend_entrypoints, key=key_name)
     # check if there are multiple entrypoints for the same name
     unique_backend_entrypoints = []
     for name, matches in backend_entrypoints_grouped:
@@ -33,7 +32,7 @@ def remove_duplicates(backend_entrypoints):
             warnings.warn(
                 f"\nFound {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
-                RuntimeWarning
+                RuntimeWarning,
             )
     return unique_backend_entrypoints
 
