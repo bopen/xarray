@@ -218,8 +218,8 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    backend = _get_backend_cls(engine, engines=plugins.detect_engines())
-    open_backend_dataset = backend.open_dataset
+    engines = plugins.detect_engines()
+    backend = _get_backend_cls(engine, engines=engines)
     open_backend_dataset_parameters = backend.open_dataset_parameters
 
     decoders = resolve_decoders_kwargs(
@@ -236,6 +236,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
+    open_backend_dataset = backend.open_dataset
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,

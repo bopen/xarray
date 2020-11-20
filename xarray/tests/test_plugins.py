@@ -11,7 +11,6 @@ backend_ep_1 = plugins.BackendEntrypoint(dummy_open_dataset)
 backend_ep_2 = plugins.BackendEntrypoint(dummy_open_dataset)
 
 def instantiate_entrypoints(specs):
-    # Create the fake entry point definition
     distribution = pkg_resources.Distribution()
     eps = []
     for spec in specs:
