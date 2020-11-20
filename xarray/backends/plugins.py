@@ -1,6 +1,5 @@
 import inspect
 import itertools
-import typing as T
 import warnings
 from functools import lru_cache
 
@@ -26,7 +25,7 @@ def remove_duplicates(backend_entrypoints):
     unique_backend_entrypoints = []
     for name, matches in backend_entrypoints_grouped:
         matches = list(matches)
-        unique_backend_entrypoints.append([name, matches[0]])
+        unique_backend_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
             selected_module_name = matches[0].module_name
@@ -34,6 +33,7 @@ def remove_duplicates(backend_entrypoints):
             warnings.warn(
                 f"\nFound {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                RuntimeWarning
             )
     return unique_backend_entrypoints
 
@@ -50,13 +50,14 @@ def detect_parameters(open_dataset):
                 f"All the parameters in {open_dataset!r} signature should be explicit. "
                 "*args and **kwargs is not supported"
             )
-    return set(parameters)
+    return tuple(parameters)
 
 
-def load_entrypoints(backend_entrypoints):
-    engines: T.Dict[str, T.Dict[str, T.Any]] = {}
-    for name, backend in backend_entrypoints:
-        backend = backend.load()
+def create_engines_dict(backend_entrypoints):
+    engines = {}
+    for backend_ep in backend_entrypoints:
+        name = backend_ep.name
+        backend = backend_ep.load()
         engines[name] = backend
     return engines
 
@@ -72,6 +73,6 @@ def set_missing_parameters(engines):
 def detect_engines():
     entrypoints = pkg_resources.iter_entry_points("xarray.backends")
     backend_entrypoints = remove_duplicates(entrypoints)
-    engines = load_entrypoints(backend_entrypoints)
+    engines = create_engines_dict(backend_entrypoints)
     set_missing_parameters(engines)
     return engines
