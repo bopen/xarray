@@ -5,9 +5,17 @@ import pytest
 
 from xarray.backends import plugins
 
-dummy_open_dataset_args = lambda filename_or_obj, *args: None
-dummy_open_dataset_kwargs = lambda filename_or_obj, **kwargs: None
-dummy_open_dataset = lambda filename_or_obj, *, decoder: None
+
+def dummy_open_dataset_args(filename_or_obj, *args):
+    pass
+
+
+def dummy_open_dataset_kwargs(filename_or_obj, **kwargs):
+    pass
+
+
+def dummy_open_dataset(filename_or_obj, *, decoder):
+    pass
 
 
 @pytest.fixture
