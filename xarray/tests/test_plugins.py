@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pkg_resources
 import pytest
 
@@ -7,28 +9,19 @@ dummy_open_dataset_args = lambda filename_or_obj, *args: None
 dummy_open_dataset_kwargs = lambda filename_or_obj, **kwargs: None
 dummy_open_dataset = lambda filename_or_obj, *, decoder: None
 
-backend_1 = plugins.BackendEntrypoint(dummy_open_dataset)
-backend_2 = plugins.BackendEntrypoint(dummy_open_dataset)
-
-
-def instantiate_entrypoints(specs):
-    distribution = pkg_resources.Distribution()
-    eps = []
-    for spec in specs:
-        eps.append(pkg_resources.EntryPoint.parse(spec, dist=distribution))
-    return eps
-
 
 @pytest.fixture
 def dummy_duplicated_entrypoints():
-    spec = [
+    specs = [
         "engine1 = xarray.tests.test_plugins:backend_1",
         "engine1 = xarray.tests.test_plugins:backend_2",
         "engine2 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
     ]
-    dummy_duplicated_entrypoints = instantiate_entrypoints(spec)
-    return dummy_duplicated_entrypoints
+    eps = []
+    for spec in specs:
+        eps.append(pkg_resources.EntryPoint.parse(spec))
+    return eps
 
 
 def test_remove_duplicates(dummy_duplicated_entrypoints):
@@ -48,12 +41,15 @@ def test_remove_duplicates_wargnings(dummy_duplicated_entrypoints):
     assert "entrypoints" in message1
 
 
+@mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=None))
 def test_create_engines_dict():
-    spec = [
+    specs = [
         "engine1 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
     ]
-    entrypoints = instantiate_entrypoints(spec)
+    entrypoints = []
+    for spec in specs:
+        entrypoints.append(pkg_resources.EntryPoint.parse(spec))
     engines = plugins.create_engines_dict(entrypoints)
     assert len(engines) == 2
     assert engines.keys() == set(("engine1", "engine2"))
