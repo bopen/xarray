@@ -70,7 +70,7 @@ def set_missing_parameters(engines):
 
 
 @lru_cache(maxsize=1)
-def detect_engines():
+def list_engines():
     entrypoints = pkg_resources.iter_entry_points("xarray.backends")
     backend_entrypoints = remove_duplicates(entrypoints)
     engines = create_engines_dict(backend_entrypoints)

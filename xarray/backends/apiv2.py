@@ -219,7 +219,7 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    engines = plugins.detect_engines()
+    engines = plugins.list_engines()
     backend = _get_backend_cls(engine, engines=engines)
 
     decoders = resolve_decoders_kwargs(
