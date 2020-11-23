@@ -17,9 +17,10 @@ class BackendEntrypoint:
 def remove_duplicates(backend_entrypoints):
 
     # sort and group entrypoints by name
-    key_name = lambda ep: ep.name
-    backend_entrypoints = sorted(backend_entrypoints, key=key_name)
-    backend_entrypoints_grouped = itertools.groupby(backend_entrypoints, key=key_name)
+    backend_entrypoints = sorted(backend_entrypoints, key=lambda ep: ep.name)
+    backend_entrypoints_grouped = itertools.groupby(
+        backend_entrypoints, key=lambda ep: ep.name
+    )
     # check if there are multiple entrypoints for the same name
     unique_backend_entrypoints = []
     for name, matches in backend_entrypoints_grouped:
