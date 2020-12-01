@@ -252,13 +252,12 @@ def open_dataset(
     open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
         "open_dataset"
     ]
-    filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
         **backend_kwargs,
-        **filtered_kwargs,
+        **{k: v for k, v in kwargs.items() if v is not None},
     )
     ds = dataset_from_backend_dataset(
         backend_ds,
@@ -270,7 +269,7 @@ def open_dataset(
         drop_variables=drop_variables,
         **decoders,
         **backend_kwargs,
-        **filtered_kwargs,
+        **kwargs,
     )
 
     return ds
