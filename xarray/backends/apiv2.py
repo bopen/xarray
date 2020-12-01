@@ -11,7 +11,7 @@ from .api import (
 
 
 def dataset_from_backend_dataset(
-    ds,
+    backend_ds,
     filename_or_obj,
     engine,
     chunks,
@@ -26,7 +26,7 @@ def dataset_from_backend_dataset(
                 "Instead found %s. " % chunks
             )
 
-    _protect_dataset_variables_inplace(ds, cache)
+    _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is not None and engine != "zarr":
         from dask.base import tokenize
 
@@ -49,27 +49,27 @@ def dataset_from_backend_dataset(
                 chunks = None
 
         if chunks is None:
-            return ds
+            return backend_ds
 
         if isinstance(chunks, int):
-            chunks = dict.fromkeys(ds.dims, chunks)
+            chunks = dict.fromkeys(backend_ds.dims, chunks)
 
         variables = {
             k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in ds.variables.items()
+            for k, v in backend_ds.variables.items()
         }
-        ds2 = ds._replace(variables)
+        ds2 = backend_ds._replace(variables)
 
     else:
-        ds2 = ds
-    ds2._file_obj = ds._file_obj
+        ds = backend_ds
+    ds._file_obj = backend_ds._file_obj
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds2.encoding["source"] = filename_or_obj
+            ds.encoding["source"] = filename_or_obj
 
-    return ds2
+    return backend_ds
 
 
 def resolve_decoders_kwargs(decode_cf, engine, **decoders):
@@ -236,12 +236,13 @@ def open_dataset(
     open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
         "open_dataset"
     ]
+    filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
         **backend_kwargs,
-        **{k: v for k, v in kwargs.items() if v is not None},
+        **filtered_kwargs,
     )
     ds = dataset_from_backend_dataset(
         backend_ds,
@@ -253,7 +254,7 @@ def open_dataset(
         drop_variables=drop_variables,
         **decoders,
         **backend_kwargs,
-        **kwargs,
+        **filtered_kwargs,
     )
 
     return ds
