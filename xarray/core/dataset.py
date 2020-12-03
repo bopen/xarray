@@ -414,10 +414,6 @@ def _maybe_chunk(
         # subtle bugs result otherwise. see GH3350
         token2 = tokenize(name, token if token else var._data, chunks)
         name2 = f"{name_prefix}{name}-{token2}"
-        import pdb
-
-        pdb.set_trace()
-
         var = var.chunk(chunks, name=name2, lock=lock, use_preferred_chunks=True)
 
         if overwrite_encoded_chunks and var.chunks is not None:
