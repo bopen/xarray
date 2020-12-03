@@ -327,8 +327,8 @@ class Variable(
         """
         self._data = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
-        self._attrs = None
-        self._encoding = None
+        self._attrs = {}
+        self._encoding = {}
         if attrs is not None:
             self.attrs = attrs
         if encoding is not None:
@@ -986,7 +986,7 @@ class Variable(
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks=None, name=None, lock=False, use_preferred_chunks=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1048,9 +1048,16 @@ class Variable(
                 kwargs = {}
 
             if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
+                chunks = tuple(chunks.get(n, None) for n, s in enumerate(self.shape))
 
-            data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
+            preferred_chunks = getattr(self, "_encoding", {}).get("chunks", {})
+            if use_preferred_chunks and preferred_chunks:
+                data = da.from_array(
+                    data, preferred_chunks, name=name, lock=lock, **kwargs
+                )
+                data = data.rechunk(chunks)
+            else:
+                data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
@@ -2436,7 +2443,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks=None, name=None, lock=False, use_preferred_chunks=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
