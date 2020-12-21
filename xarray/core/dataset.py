@@ -642,7 +642,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         "_coord_names",
         "_dims",
         "_encoding",
-        "_file_obj",
         "_indexes",
         "_variables",
         "__weakref__",
@@ -684,7 +683,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
-        self._file_obj = None
         self._encoding = None
         self._variables = variables
         self._coord_names = coord_names
@@ -700,7 +698,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if decoder:
             variables, attributes = decoder(variables, attributes)
         obj = cls(variables, attrs=attributes)
-        obj._file_obj = store
         return obj
 
     @property
@@ -873,7 +870,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
         )
         return self._dask_postcompute, args
 
@@ -893,7 +889,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
         )
         return self._dask_postpersist, args
 
@@ -1004,7 +999,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         attrs=None,
         indexes=None,
         encoding=None,
-        file_obj=None,
     ):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
@@ -1017,7 +1011,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._dims = dims
         obj._indexes = indexes
         obj._attrs = attrs
-        obj._file_obj = file_obj
         obj._encoding = encoding
         return obj
 
@@ -2115,7 +2108,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             attrs=self._attrs,
             indexes=indexes,
             encoding=self._encoding,
-            file_obj=self._file_obj,
         )
 
     def _isel_fancy(

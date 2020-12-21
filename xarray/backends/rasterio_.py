@@ -360,7 +360,4 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         name_prefix = "open_rasterio-%s" % token
         result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 
-    # Make the file closeable
-    result._file_obj = manager
-
     return result

@@ -346,7 +346,6 @@ class DataArray(AbstractArray, DataWithCoords):
     __slots__ = (
         "_cache",
         "_coords",
-        "_file_obj",
         "_indexes",
         "_name",
         "_variable",
@@ -415,8 +414,6 @@ class DataArray(AbstractArray, DataWithCoords):
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
         self._indexes = indexes
-
-        self._file_obj = None
 
     def _replace(
         self,

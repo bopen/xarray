@@ -1264,9 +1264,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def close(self: Any) -> None:
         """Close any files linked to this object"""
-        if self._file_obj is not None:
-            self._file_obj.close()
-        self._file_obj = None
+        pass
 
     def isnull(self, keep_attrs: bool = None):
         """Test each value in the array for whether it is a missing value.

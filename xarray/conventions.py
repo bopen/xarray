@@ -576,12 +576,10 @@ def decode_cf(
         vars = obj._variables
         attrs = obj.attrs
         extra_coords = set(obj.coords)
-        file_obj = obj._file_obj
         encoding = obj.encoding
     elif isinstance(obj, AbstractDataStore):
         vars, attrs = obj.load()
         extra_coords = set()
-        file_obj = obj
         encoding = obj.get_encoding()
     else:
         raise TypeError("can only decode Dataset or DataStore objects")
@@ -599,7 +597,6 @@ def decode_cf(
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
-    ds._file_obj = file_obj
     ds.encoding = encoding
 
     return ds
