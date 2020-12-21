@@ -221,6 +221,8 @@ class ScipyDataStore(WritableCFDataStore):
     def close(self):
         self._manager.close()
 
+    __del__ = close
+
 
 def open_backend_dataset_scipy(
     filename_or_obj,
