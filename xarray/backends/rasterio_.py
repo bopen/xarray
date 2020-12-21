@@ -131,6 +131,9 @@ class RasterioArrayWrapper(BackendArray):
             key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
         )
 
+    def __del__(self):
+        self.manager.close()
+
 
 def _parse_envi(meta):
     """Parse ENVI metadata into Python data structures.
@@ -292,6 +295,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         try:
             attrs["crs"] = riods.crs.to_proj4()
         except AttributeError:
+            attrs["crs"] = riods.crs.to_string()
             attrs["crs"] = riods.crs.to_string()
     if hasattr(riods, "res"):
         # (width, height) tuple of pixels in units of CRS
