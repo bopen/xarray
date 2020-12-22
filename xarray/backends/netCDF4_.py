@@ -504,6 +504,11 @@ class NetCDF4DataStore(WritableCFDataStore):
     def close(self, **kwargs):
         self._manager.close(**kwargs)
 
+    def __del__(self):
+        # exceptions during __init__ may happen before _manager is set
+        if hasattr(self, "_manager"):
+            self._manager.close()
+
 
 def open_backend_dataset_netcdf4(
     filename_or_obj,

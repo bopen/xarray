@@ -221,7 +221,10 @@ class ScipyDataStore(WritableCFDataStore):
     def close(self):
         self._manager.close()
 
-    __del__ = close
+    def __del__(self):
+        # exceptions during __init__ may happen before _manager is set
+        if hasattr(self, "_manager"):
+            self._manager.close()
 
 
 def open_backend_dataset_scipy(
