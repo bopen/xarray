@@ -16,6 +16,33 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = "__values__"
 
 
+class AbstractBackendWriter:
+
+    shedulers = []
+    support_dask = None
+
+    @classmethod
+    def open_store(cls):
+        pass
+
+    def prepare_store(self, dataset):
+        # writes metadata and dimensions
+        # returns a list targets and list of sources to be passed to dask
+        pass
+
+    def store_sync(self):
+        pass
+
+    def store_close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
+
+
 def _encode_variable_name(name):
     if name is None:
         name = NONE_VAR_NAME
@@ -216,12 +243,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         """
         self.store(dataset, dataset.attrs)
 
-    def store(
+    def prepare_store(
         self,
         variables,
         attributes,
         check_encoding_set=frozenset(),
-        writer=None,
         unlimited_dims=None,
     ):
         """
@@ -244,16 +270,29 @@ class AbstractWritableDataStore(AbstractDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-        if writer is None:
-            writer = ArrayWriter()
 
         variables, attributes = self.encode(variables, attributes)
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(
-            variables, check_encoding_set, writer, unlimited_dims=unlimited_dims
+        sources, targets = self.set_variables(
+            variables, check_encoding_set, unlimited_dims=unlimited_dims
         )
+        return sources, targets
+
+    def store(
+        self,
+        variables,
+        attributes,
+        check_encoding_set=frozenset(),
+        writer=None,
+        unlimited_dims=None,
+    ):
+        sources, targets = self.prepare_store(
+            variables, attributes, check_encoding_set, unlimited_dims
+        )
+        for source, target in zip(sources, targets):
+            writer.add(source, target)
 
     def set_attributes(self, attributes):
         """
@@ -268,7 +307,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for k, v in attributes.items():
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
+    def set_variables(self, variables, check_encoding_set, unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
         store.
@@ -286,14 +325,17 @@ class AbstractWritableDataStore(AbstractDataStore):
             dimensions.
         """
 
+        sources = []
+        targets = []
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
                 name, v, check, unlimited_dims=unlimited_dims
             )
-
-            writer.add(source, target)
+            sources.append(source)
+            targets.append(target)
+        return sources, targets
 
     def set_dimensions(self, variables, unlimited_dims=None):
         """
@@ -349,3 +391,4 @@ class BackendEntrypoint:
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters
         self.guess_can_open = guess_can_open
+
