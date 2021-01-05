@@ -384,12 +384,13 @@ h5netcdf_backend = BackendEntrypoint(
 )
 
 
-
 class H5NetCDFWriter(AbstractBackendWriter):
     shedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing"]
+    support_bytes = False
 
-    def __init__(self, store):
+    def __init__(self, store, unlimited_dims):
         self.store = store
+        self.unlimited_dims = unlimited_dims
 
     @classmethod
     def open_store(
@@ -402,6 +403,7 @@ class H5NetCDFWriter(AbstractBackendWriter):
         autoclose=False,
         invalid_netcdf=None,
         phony_dims=None,
+        unlimited_dims=None
     ):
         store = H5NetCDFStore.open(
             filename,
@@ -413,14 +415,14 @@ class H5NetCDFWriter(AbstractBackendWriter):
             invalid_netcdf,
             phony_dims,
         )
-        return cls(store)
+        return cls(store, unlimited_dims)
 
     def prepare_store(
         self,
         dataset,
         encoding,
-        unlimited_dims=None,
     ):
+        unlimited_dims = self.unlimited_dims
         if unlimited_dims is None:
             unlimited_dims = dataset.encoding.get("unlimited_dims", None)
         if unlimited_dims is not None:
@@ -430,7 +432,6 @@ class H5NetCDFWriter(AbstractBackendWriter):
                 unlimited_dims = [unlimited_dims]
             else:
                 unlimited_dims = list(unlimited_dims)
-
         if encoding is None:
             encoding = {}
 

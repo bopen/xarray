@@ -19,7 +19,7 @@ NONE_VAR_NAME = "__values__"
 class AbstractBackendWriter:
 
     shedulers = []
-    support_dask = None
+    support_bytes = False
 
     @classmethod
     def open_store(cls):

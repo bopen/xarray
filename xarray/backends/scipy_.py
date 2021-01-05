@@ -1,12 +1,13 @@
 import io
 import os
-
+from typing import Iterable
 import numpy as np
-
+from .. import conventions
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, BackendEntrypoint, WritableCFDataStore
+from .common import BackendArray, BackendEntrypoint, WritableCFDataStore, AbstractBackendWriter
+
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
@@ -271,3 +272,72 @@ def open_backend_dataset_scipy(
 scipy_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
 )
+
+class ScipyWriter(AbstractBackendWriter):
+    shedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing"]
+    support_bytes = True
+
+    def __init__(self, store):
+        self.store = store
+
+    @classmethod
+    def open_store(
+        cls,
+        filename,
+        mode="r",
+        format=None,
+        group=None,
+        mmap=None,
+        lock=None,
+        **kwargs
+    ):
+        if len(kwargs) > 0:
+            raise ValueError(f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf")
+
+        store = ScipyDataStore(
+            filename,
+            mode,
+            format,
+            group,
+            mmap,
+            lock,
+        )
+        return cls(store)
+
+    def prepare_store(
+        self,
+        dataset,
+        encoding,
+        unlimited_dims=None,
+    ):
+        if unlimited_dims is None:
+            unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+        if unlimited_dims is not None:
+            if isinstance(unlimited_dims, str) or not isinstance(
+                unlimited_dims, Iterable
+            ):
+                unlimited_dims = [unlimited_dims]
+            else:
+                unlimited_dims = list(unlimited_dims)
+
+        if encoding is None:
+            encoding = {}
+
+        variables, attrs = conventions.encode_dataset_coordinates(dataset)
+
+        check_encoding = set()
+        for k, enc in encoding.items():
+            # no need to shallow copy the variable again; that already happened
+            # in encode_dataset_coordinates
+            variables[k].encoding = enc
+            check_encoding.add(k)
+
+        return self.store.prepare_store(
+            variables, attrs, check_encoding, unlimited_dims=unlimited_dims
+        )
+
+    def close(self):
+        return self.store.close()
+
+    def sync(self):
+        return self.store.sync()
