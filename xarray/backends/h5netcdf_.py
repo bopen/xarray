@@ -379,13 +379,18 @@ def open_backend_dataset_h5netcdf(
     return ds
 
 
-h5netcdf_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_h5netcdf, guess_can_open=guess_can_open_h5netcdf
-)
+def guess_can_write(filepath):
+    if isinstance(filepath, io.BytesIO):
+        return True
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".gz"}
 
 
 class H5NetCDFWriter(AbstractBackendWriter):
-    shedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing"]
+    schedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing", "threaded"]
     support_bytes = False
 
     def __init__(self, store, unlimited_dims):
@@ -453,3 +458,11 @@ class H5NetCDFWriter(AbstractBackendWriter):
 
     def sync(self):
         return self.store.sync()
+
+
+h5netcdf_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_h5netcdf,
+    guess_can_open=guess_can_open_h5netcdf,
+    guess_can_write=guess_can_write,
+    writer=H5NetCDFWriter,
+)

@@ -16,33 +16,6 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = "__values__"
 
 
-class AbstractBackendWriter:
-
-    shedulers = []
-    support_bytes = False
-
-    @classmethod
-    def open_store(cls):
-        pass
-
-    def prepare_store(self, dataset):
-        # writes metadata and dimensions
-        # returns a list targets and list of sources to be passed to dask
-        pass
-
-    def store_sync(self):
-        pass
-
-    def store_close(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.close()
-
-
 def _encode_variable_name(name):
     if name is None:
         name = NONE_VAR_NAME
@@ -384,11 +357,57 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class BackendEntrypoint:
-    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
+class AbstractBackendWriter:
 
-    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
+    shedulers = []
+    support_bytes = False
+
+    @classmethod
+    def guess_can_write(cls, filepath):
+        pass
+
+    @classmethod
+    def open_store(cls):
+        pass
+
+    def prepare_store(self, dataset):
+        # writes metadata and dimensions
+        # returns a list targets and list of sources to be passed to dask
+        pass
+
+    def store_sync(self):
+        pass
+
+    def store_close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
+
+
+class BackendEntrypoint:
+    __slots__ = (
+        "guess_can_open",
+        "open_dataset",
+        "open_dataset_parameters",
+        "guess_can_write",
+        "writer"
+    )
+
+    def __init__(
+        self,
+        open_dataset,
+        open_dataset_parameters=None,
+        guess_can_open=None,
+        guess_can_write=None,
+        writer=None
+    ):
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters
         self.guess_can_open = guess_can_open
+        self.guess_can_write = guess_can_write
+        self.writer = writer
 

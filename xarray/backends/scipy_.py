@@ -269,12 +269,18 @@ def open_backend_dataset_scipy(
     return ds
 
 
-scipy_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
-)
+def guess_can_write(cls, filepath):
+    if isinstance(filepath, io.BytesIO):
+        return True
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".gz"}
+
 
 class ScipyWriter(AbstractBackendWriter):
-    shedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing"]
+    schedulers = ["synchronous", "multiprocessing", "threaded"]
     support_bytes = True
 
     def __init__(self, store):
@@ -341,3 +347,11 @@ class ScipyWriter(AbstractBackendWriter):
 
     def sync(self):
         return self.store.sync()
+
+
+scipy_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_scipy,
+    guess_can_open=guess_can_open_scipy,
+    guess_can_write=guess_can_write,
+    writer=ScipyWriter,
+)

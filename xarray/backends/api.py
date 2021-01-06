@@ -422,11 +422,11 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-        kwargs = {k: v for k, v in locals().items() if v is not None}
-        from . import apiv2
+    # if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
+    kwargs = {k: v for k, v in locals().items() if v is not None}
+    from . import apiv2
 
-        return apiv2.open_dataset(**kwargs)
+    return apiv2.open_dataset(**kwargs)
 
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
@@ -1499,9 +1499,9 @@ def _resolve_engine(engine, path_or_file):
 
 def _check_input_consistency(
     engine,
+    backend_writer,
     path_or_file,
     compute,
-    autoclose,
     scheduler,
 ):
     if path_or_file is None:
@@ -1516,7 +1516,7 @@ def _check_input_consistency(
                 "to_netcdf() with compute=False is not yet implemented when "
                 "returning bytes"
             )
-    if autoclose and engine == "scipy":
+    if scheduler and scheduler not in backend_writer.schedulers:
         raise NotImplementedError(
             "Writing netCDF files with the %s backend "
             "is not currently supported with dask's %s "
@@ -1571,14 +1571,19 @@ def to_store(
         raise ValueError("unrecognized engine for to_netcdf: %r" % engine)
 
     # handle scheduler specific logic
-    scheduler = _get_scheduler()
-
     have_chunks = any(v.chunks for v in dataset.variables.values())
-    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
-    if autoclose:
-        kwargs["autoclose"] = autoclose
 
-    _check_input_consistency(engine, path_or_file, compute, autoclose, scheduler)
+    if have_chunks:
+        scheduler = _get_scheduler()
+    else:
+        scheduler = None
+    if scheduler in ["distributed", "multiprocessing"]:
+        autoclose = True
+        kwargs["autoclose"] = autoclose
+    else:
+        autoclose = False
+
+    _check_input_consistency(engine, backend_writer, path_or_file, compute, scheduler)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
