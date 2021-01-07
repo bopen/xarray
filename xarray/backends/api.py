@@ -1003,8 +1003,9 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if engine in BACKEND_WRITERS:
+    if engine in ["h5netcdf", "scipy"]:
         kwargs = {k: v for k, v in locals().items() if v is not None}
+        from . import apiv2
         backend_kwgars = {}
         invalid_netcdf = kwargs.pop("invalid_netcdf", None)
         if invalid_netcdf:
@@ -1014,7 +1015,7 @@ def to_netcdf(
         if unlimited_dims:
             backend_kwgars["unlimited_dims"] = unlimited_dims
 
-        return to_store(
+        return apiv2.to_store(
             **kwargs,
             **backend_kwgars,
         )
@@ -1477,146 +1478,3 @@ def to_zarr(
         return dask.delayed(_finalize_store)(writes, zstore)
 
     return zstore
-
-
-BACKEND_WRITERS = {
-    "h5netcdf": backends.h5netcdf_.H5NetCDFWriter,
-    "scipy": backends.scipy_.ScipyWriter,
-}
-
-
-def _resolve_engine(engine, path_or_file):
-    if path_or_file is None:
-        if engine is None:
-            engine = "scipy"
-    elif isinstance(path_or_file, str):
-        if engine is None:
-            engine = _get_default_engine(path_or_file)
-    else:  # file-like object
-        engine = "scipy"
-    return engine
-
-
-def _check_input_consistency(
-    engine,
-    backend_writer,
-    path_or_file,
-    compute,
-    scheduler,
-):
-    if path_or_file is None:
-        if engine != "scipy":
-            raise ValueError(
-                "invalid engine for creating bytes with "
-                "to_netcdf: %r. Only the default engine "
-                "or engine='scipy' is supported" % engine
-            )
-        if not compute:
-            raise NotImplementedError(
-                "to_netcdf() with compute=False is not yet implemented when "
-                "returning bytes"
-            )
-    if scheduler and scheduler not in backend_writer.schedulers:
-        raise NotImplementedError(
-            "Writing netCDF files with the %s backend "
-            "is not currently supported with dask's %s "
-            "scheduler" % (engine, scheduler)
-        )
-
-
-def prepare_writer(sources, targets, writer=None):
-    if not writer:
-        writer = ArrayWriter()
-    for source, target in zip(sources, targets):
-        writer.add(source, target)
-    return writer
-
-
-def to_store(
-    dataset: Dataset,
-    path_or_file=None,
-    *,
-    engine: str = None,
-    mode: str = "w",
-    format: str = None,
-    group: str = None,
-    compute: bool = True,
-    multifile: bool = False,
-    encoding: Mapping = None,
-    **kwargs,
-):
-    """This function creates an appropriate datastore for writing a dataset to
-    disk as a netCDF file
-
-    See `Dataset.to_netcdf` for full API docs.
-
-    The ``multifile`` argument is only for the private use of save_mfdataset.
-    """
-
-    if isinstance(path_or_file, Path):
-        path_or_file = str(path_or_file)
-        path_or_file = _normalize_path(path_or_file)
-    engine = _resolve_engine(engine, path_or_file)
-
-    target = path_or_file if path_or_file is not None else BytesIO()
-
-    if encoding is None:
-        encoding = {}
-    if format is not None:
-        format = format.upper()
-
-    try:
-        backend_writer = BACKEND_WRITERS[engine]
-    except KeyError:
-        raise ValueError("unrecognized engine for to_netcdf: %r" % engine)
-
-    # handle scheduler specific logic
-    have_chunks = any(v.chunks for v in dataset.variables.values())
-
-    if have_chunks:
-        scheduler = _get_scheduler()
-    else:
-        scheduler = None
-    if scheduler in ["distributed", "multiprocessing"]:
-        autoclose = True
-        kwargs["autoclose"] = autoclose
-    else:
-        autoclose = False
-
-    _check_input_consistency(engine, backend_writer, path_or_file, compute, scheduler)
-
-    # validate Dataset keys, DataArray names, and attr keys/values
-    _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
-
-    store = backend_writer.open_store(target, mode, format, group, **kwargs)
-
-    # TODO: figure out how to refactor this logic (here and in save_mfdataset)
-    # to avoid this mess of conditionals
-    try:
-        # TODO: allow this work (setting up the file for writing array data)
-        # to be parallelized with dask
-        sources, targets = store.prepare_store(
-            dataset, encoding=encoding
-        )
-        writer = prepare_writer(sources, targets)
-        if autoclose:
-            store.close()
-
-        if multifile:
-            return writer, store
-
-        writes = writer.sync(compute=compute)
-
-        if path_or_file is None:
-            store.sync()
-            return target.getvalue()
-    finally:
-        if not multifile and compute:
-            store.close()
-
-    if not compute:
-        import dask
-
-        return dask.delayed(_finalize_store)(writes, store)
-    return None

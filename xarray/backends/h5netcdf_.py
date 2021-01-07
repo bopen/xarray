@@ -390,7 +390,13 @@ def guess_can_write(filepath):
 
 
 class H5NetCDFWriter(AbstractBackendWriter):
-    schedulers = ["distributed", "multiprocessing", "synchronous", "multiprocessing", "threaded"]
+    schedulers = [
+        "distributed",
+        "multiprocessing",
+        "synchronous",
+        "multiprocessing",
+        "threaded",
+    ]
     support_bytes = False
 
     def __init__(self, store, unlimited_dims):
@@ -408,7 +414,7 @@ class H5NetCDFWriter(AbstractBackendWriter):
         autoclose=False,
         invalid_netcdf=None,
         phony_dims=None,
-        unlimited_dims=None
+        unlimited_dims=None,
     ):
         store = H5NetCDFStore.open(
             filename,

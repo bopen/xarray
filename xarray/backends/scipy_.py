@@ -1,13 +1,19 @@
 import io
 import os
 from typing import Iterable
+
 import numpy as np
+
 from .. import conventions
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, BackendEntrypoint, WritableCFDataStore, AbstractBackendWriter
-
+from .common import (
+    AbstractBackendWriter,
+    BackendArray,
+    BackendEntrypoint,
+    WritableCFDataStore,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
@@ -288,17 +294,12 @@ class ScipyWriter(AbstractBackendWriter):
 
     @classmethod
     def open_store(
-        cls,
-        filename,
-        mode="r",
-        format=None,
-        group=None,
-        mmap=None,
-        lock=None,
-        **kwargs
+        cls, filename, mode="r", format=None, group=None, mmap=None, lock=None, **kwargs
     ):
         if len(kwargs) > 0:
-            raise ValueError(f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf")
+            raise ValueError(
+                f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf"
+            )
 
         store = ScipyDataStore(
             filename,
