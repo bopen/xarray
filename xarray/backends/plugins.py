@@ -101,7 +101,7 @@ def list_engines():
     return build_engines(entrypoints)
 
 
-def guess_engine(store_spec):
+def guess_engine(store_spec, mode="open"):
     engines = list_engines()
 
     # use the pre-defined selection order for netCDF files
@@ -126,4 +126,5 @@ def get_backend(engine):
         raise ValueError(
             f"unrecognized engine {engine} must be one of: {list(engines)}"
         )
+
     return engines[engine]

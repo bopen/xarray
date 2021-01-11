@@ -1,6 +1,7 @@
 import functools
 import io
 import os
+import pathlib
 import typing as T
 from distutils.version import LooseVersion
 
@@ -11,7 +12,7 @@ from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
 from .common import (
-    AbstractBackendWriter,
+    AbstractBackendDatasetWriter,
     BackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
@@ -389,33 +390,37 @@ def guess_can_write(filepath):
     return ext in {".nc", ".gz"}
 
 
-class H5NetCDFWriter(AbstractBackendWriter):
+class H5NetCDFWriter(AbstractBackendDatasetWriter):
     schedulers = [
         "distributed",
         "multiprocessing",
         "synchronous",
-        "multiprocessing",
         "threaded",
     ]
     support_bytes = False
 
-    def __init__(self, store, unlimited_dims):
-        self.store = store
-        self.unlimited_dims = unlimited_dims
-
-    @classmethod
-    def open_store(
-        cls,
+    def __init__(
+        self,
         filename,
         mode="r",
         format=None,
         group=None,
+        unlimited_dims=None,
         lock=None,
         autoclose=False,
         invalid_netcdf=None,
         phony_dims=None,
-        unlimited_dims=None,
+        **kwargs,
     ):
+        if len(kwargs) > 0:
+            raise ValueError(
+                f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf"
+            )
+
+        if not (isinstance(filename, str) or isinstance(filename, pathlib.Path)):
+            raise ValueError(
+                "invalid engine h5netcdf for creating bytes with " "to_netcdf"
+            )
         store = H5NetCDFStore.open(
             filename,
             mode,
@@ -426,12 +431,13 @@ class H5NetCDFWriter(AbstractBackendWriter):
             invalid_netcdf,
             phony_dims,
         )
-        return cls(store, unlimited_dims)
+        self.store = store
+        self.unlimited_dims = unlimited_dims
 
     def prepare_store(
         self,
         dataset,
-        encoding,
+        encoding={},
     ):
         unlimited_dims = self.unlimited_dims
         if unlimited_dims is None:
@@ -443,8 +449,6 @@ class H5NetCDFWriter(AbstractBackendWriter):
                 unlimited_dims = [unlimited_dims]
             else:
                 unlimited_dims = list(unlimited_dims)
-        if encoding is None:
-            encoding = {}
 
         variables, attrs = conventions.encode_dataset_coordinates(dataset)
 
@@ -470,5 +474,5 @@ h5netcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_h5netcdf,
     guess_can_open=guess_can_open_h5netcdf,
     guess_can_write=guess_can_write,
-    writer=H5NetCDFWriter,
+    dataset_writer=H5NetCDFWriter,
 )

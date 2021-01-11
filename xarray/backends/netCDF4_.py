@@ -3,15 +3,17 @@ import operator
 import os
 import pathlib
 from contextlib import suppress
+from typing import Iterable
 
 import numpy as np
 
-from .. import coding
+from .. import coding, conventions
 from ..coding.variables import pop_to
 from ..core import indexing
 from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
+    AbstractBackendDatasetWriter,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
@@ -560,6 +562,100 @@ def open_backend_dataset_netcdf4(
     return ds
 
 
+def guess_can_write():
+    pass
+
+
+class NetCDF4Writer(AbstractBackendDatasetWriter):
+    schedulers = [
+        "distributed",
+        "multiprocessing",
+        "synchronous",
+        "threaded",
+    ]
+    support_bytes = True
+
+    def __init__(
+        self,
+        filename,
+        mode="r",
+        format=None,
+        group=None,
+        unlimited_dims=None,
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        lock_maker=None,
+        autoclose=False,
+        **kwargs,
+    ):
+
+        if len(kwargs) > 0:
+            raise ValueError(
+                f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf"
+            )
+        # if isinstance(filename, pathlib.Path):
+        #     filename = os.fspath(filename)
+        if not (isinstance(filename, str) or isinstance(filename, pathlib.Path)):
+            raise ValueError(
+                "invalid engine netcdf4 for creating bytes with " "to_netcdf"
+            )
+
+        store = NetCDF4DataStore.open(
+            filename,
+            mode,
+            format,
+            group,
+            clobber,
+            diskless,
+            persist,
+            lock,
+            lock_maker,
+            autoclose,
+        )
+        self.store = store
+        self.unlimited_dims = unlimited_dims
+
+    def prepare_store(
+        self,
+        dataset,
+        encoding={},
+    ):
+        unlimited_dims = self.unlimited_dims
+        if unlimited_dims is None:
+            unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+        if unlimited_dims is not None:
+            if isinstance(unlimited_dims, str) or not isinstance(
+                unlimited_dims, Iterable
+            ):
+                unlimited_dims = [unlimited_dims]
+            else:
+                unlimited_dims = list(unlimited_dims)
+
+        variables, attrs = conventions.encode_dataset_coordinates(dataset)
+
+        check_encoding = set()
+        for k, enc in encoding.items():
+            # no need to shallow copy the variable again; that already happened
+            # in encode_dataset_coordinates
+            variables[k].encoding = enc
+            check_encoding.add(k)
+
+        return self.store.prepare_store(
+            variables, attrs, check_encoding, unlimited_dims=unlimited_dims
+        )
+
+    def close(self):
+        return self.store.close()
+
+    def sync(self):
+        return self.store.sync()
+
+
 netcdf4_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_netcdf4, guess_can_open=guess_can_open_netcdf4
+    open_dataset=open_backend_dataset_netcdf4,
+    guess_can_open=guess_can_open_netcdf4,
+    guess_can_write=guess_can_write,
+    dataset_writer=NetCDF4Writer,
 )

@@ -1003,9 +1003,10 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if engine in ["h5netcdf", "scipy"]:
+    if engine in ["h5netcdf", "scipy", "netcdf4"]:
         kwargs = {k: v for k, v in locals().items() if v is not None}
         from . import apiv2
+
         backend_kwgars = {}
         invalid_netcdf = kwargs.pop("invalid_netcdf", None)
         if invalid_netcdf:

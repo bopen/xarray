@@ -9,7 +9,7 @@ from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
 from .common import (
-    AbstractBackendWriter,
+    AbstractBackendDatasetWriter,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
@@ -285,20 +285,24 @@ def guess_can_write(cls, filepath):
     return ext in {".nc", ".gz"}
 
 
-class ScipyWriter(AbstractBackendWriter):
-    schedulers = ["synchronous", "multiprocessing", "threaded"]
+class ScipyWriter(AbstractBackendDatasetWriter):
+    schedulers = ["synchronous", "threaded"]
     support_bytes = True
 
-    def __init__(self, store):
-        self.store = store
-
-    @classmethod
-    def open_store(
-        cls, filename, mode="r", format=None, group=None, mmap=None, lock=None, **kwargs
+    def __init__(
+        self,
+        filename,
+        mode="r",
+        format=None,
+        group=None,
+        unlimited_dims=None,
+        mmap=None,
+        lock=None,
+        **kwargs,
     ):
         if len(kwargs) > 0:
             raise ValueError(
-                f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf"
+                f"unrecognized option '{', '.join(list(kwargs))}' for engine scipy"
             )
 
         store = ScipyDataStore(
@@ -309,14 +313,15 @@ class ScipyWriter(AbstractBackendWriter):
             mmap,
             lock,
         )
-        return cls(store)
+        self.store = store
+        self.unlimited_dims = unlimited_dims
 
     def prepare_store(
         self,
         dataset,
-        encoding,
-        unlimited_dims=None,
+        encoding={},
     ):
+        unlimited_dims = self.unlimited_dims
         if unlimited_dims is None:
             unlimited_dims = dataset.encoding.get("unlimited_dims", None)
         if unlimited_dims is not None:
@@ -326,9 +331,6 @@ class ScipyWriter(AbstractBackendWriter):
                 unlimited_dims = [unlimited_dims]
             else:
                 unlimited_dims = list(unlimited_dims)
-
-        if encoding is None:
-            encoding = {}
 
         variables, attrs = conventions.encode_dataset_coordinates(dataset)
 
@@ -354,5 +356,5 @@ scipy_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_scipy,
     guess_can_open=guess_can_open_scipy,
     guess_can_write=guess_can_write,
-    writer=ScipyWriter,
+    dataset_writer=ScipyWriter,
 )

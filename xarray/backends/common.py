@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+import typing as T
 
 import numpy as np
 
@@ -357,9 +358,9 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class AbstractBackendWriter:
+class AbstractBackendDatasetWriter:
 
-    shedulers = []
+    shedulers: T.List[str] = []
     support_bytes = False
 
     @classmethod
@@ -394,7 +395,7 @@ class BackendEntrypoint:
         "open_dataset",
         "open_dataset_parameters",
         "guess_can_write",
-        "writer",
+        "dataset_writer",
     )
 
     def __init__(
@@ -403,10 +404,10 @@ class BackendEntrypoint:
         open_dataset_parameters=None,
         guess_can_open=None,
         guess_can_write=None,
-        writer=None,
+        dataset_writer=None,
     ):
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters
         self.guess_can_open = guess_can_open
         self.guess_can_write = guess_can_write
-        self.writer = writer
+        self.dataset_writer = dataset_writer
