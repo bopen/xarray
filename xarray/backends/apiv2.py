@@ -292,20 +292,6 @@ def open_dataset(
     return ds
 
 
-def _resolve_engine(engine, path_or_file):
-    from .api import _get_default_engine
-
-    if path_or_file is None:
-        if engine is None:
-            engine = "scipy"
-    elif isinstance(path_or_file, str) or isinstance(path_or_file, pathlib.Path):
-        if engine is None:
-            engine = _get_default_engine(path_or_file)
-    else:  # file-like object
-        engine = "scipy"
-    return engine
-
-
 def prepare_writer(sources, targets, writer=None):
     if not writer:
         writer = ArrayWriter()
@@ -344,8 +330,8 @@ def to_store(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-
-    engine = _resolve_engine(engine, path_or_file)
+    if engine is None:
+        engine = plugins.guess_engine(path_or_file, mode="write")
     if encoding is None:
         encoding = {}
 

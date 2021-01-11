@@ -103,10 +103,12 @@ def list_engines():
 
 def guess_engine(store_spec, mode="open"):
     engines = list_engines()
+    check_function_name = "guess_can_" + mode
 
     for engine, backend in engines.items():
+        guess_can = backend.__getattribute__(check_function_name)
         try:
-            if backend.guess_can_open and backend.guess_can_open(store_spec):
+            if guess_can and guess_can(store_spec):
                 return engine
         except Exception:
             logging.exception(f"{engine!r} fails while guessing")

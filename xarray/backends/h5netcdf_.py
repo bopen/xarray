@@ -382,7 +382,7 @@ def open_backend_dataset_h5netcdf(
 
 def guess_can_write(filepath):
     if isinstance(filepath, io.BytesIO):
-        return True
+        return False
     try:
         _, ext = os.path.splitext(filepath)
     except TypeError:

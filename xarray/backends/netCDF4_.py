@@ -4,6 +4,7 @@ import os
 import pathlib
 from contextlib import suppress
 from typing import Iterable
+import io
 
 import numpy as np
 
@@ -562,9 +563,14 @@ def open_backend_dataset_netcdf4(
     return ds
 
 
-def guess_can_write():
-    pass
-
+def guess_can_write(filepath):
+    if isinstance(filepath, io.BytesIO):
+        return False
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".gz"}
 
 class NetCDF4Writer(AbstractBackendDatasetWriter):
     schedulers = [
