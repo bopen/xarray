@@ -1,5 +1,4 @@
 import os
-import pathlib
 from io import BytesIO
 from typing import Mapping
 

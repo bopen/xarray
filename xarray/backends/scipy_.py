@@ -275,16 +275,6 @@ def open_backend_dataset_scipy(
     return ds
 
 
-def guess_can_write(cls, filepath):
-    if isinstance(filepath, io.BytesIO):
-        return True
-    try:
-        _, ext = os.path.splitext(filepath)
-    except TypeError:
-        return False
-    return ext in {".nc", ".gz"}
-
-
 class ScipyWriter(AbstractBackendDatasetWriter):
     schedulers = ["synchronous", "threaded"]
     support_bytes = True
@@ -352,9 +342,19 @@ class ScipyWriter(AbstractBackendDatasetWriter):
         return self.store.sync()
 
 
+def guess_can_write_scipy(filepath):
+    if isinstance(filepath, io.BytesIO):
+        return True
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".gz"}
+
+
 scipy_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_scipy,
     guess_can_open=guess_can_open_scipy,
-    guess_can_write=guess_can_write,
+    guess_can_write=guess_can_write_scipy,
     dataset_writer=ScipyWriter,
 )

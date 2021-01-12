@@ -380,16 +380,6 @@ def open_backend_dataset_h5netcdf(
     return ds
 
 
-def guess_can_write(filepath):
-    if isinstance(filepath, io.BytesIO):
-        return False
-    try:
-        _, ext = os.path.splitext(filepath)
-    except TypeError:
-        return False
-    return ext in {".nc", ".gz"}
-
-
 class H5NetCDFWriter(AbstractBackendDatasetWriter):
     schedulers = [
         "distributed",
@@ -470,9 +460,19 @@ class H5NetCDFWriter(AbstractBackendDatasetWriter):
         return self.store.sync()
 
 
+def guess_can_write_h5netcdf(filepath):
+    if isinstance(filepath, io.BytesIO):
+        return False
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
 h5netcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_h5netcdf,
     guess_can_open=guess_can_open_h5netcdf,
-    guess_can_write=guess_can_write,
+    guess_can_write=guess_can_write_h5netcdf,
     dataset_writer=H5NetCDFWriter,
 )

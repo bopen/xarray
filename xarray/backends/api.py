@@ -422,11 +422,11 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    # if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-    kwargs = {k: v for k, v in locals().items() if v is not None}
-    from . import apiv2
+    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
+        kwargs = {k: v for k, v in locals().items() if v is not None}
+        from . import apiv2
 
-    return apiv2.open_dataset(**kwargs)
+        return apiv2.open_dataset(**kwargs)
 
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"

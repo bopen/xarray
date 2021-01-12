@@ -563,15 +563,6 @@ def open_backend_dataset_netcdf4(
     return ds
 
 
-def guess_can_write(filepath):
-    if isinstance(filepath, io.BytesIO):
-        return False
-    try:
-        _, ext = os.path.splitext(filepath)
-    except TypeError:
-        return False
-    return ext in {".nc", ".gz"}
-
 class NetCDF4Writer(AbstractBackendDatasetWriter):
     schedulers = [
         "distributed",
@@ -599,13 +590,11 @@ class NetCDF4Writer(AbstractBackendDatasetWriter):
 
         if len(kwargs) > 0:
             raise ValueError(
-                f"unrecognized option '{', '.join(list(kwargs))}' for engine h5netcdf"
+                f"unrecognized option '{', '.join(list(kwargs))}' for engine netcdf4"
             )
-        # if isinstance(filename, pathlib.Path):
-        #     filename = os.fspath(filename)
         if not (isinstance(filename, str) or isinstance(filename, pathlib.Path)):
             raise ValueError(
-                "invalid engine netcdf4 for creating bytes with " "to_netcdf"
+                "invalid engine netcdf4 for creating bytes with to_netcdf"
             )
 
         store = NetCDF4DataStore.open(
@@ -659,9 +648,21 @@ class NetCDF4Writer(AbstractBackendDatasetWriter):
         return self.store.sync()
 
 
+def guess_can_write_netcdf4(filepath):
+    if isinstance(filepath, io.BytesIO):
+        return False
+    if isinstance(filepath, str) and is_remote_uri(filepath):
+        return True
+    try:
+        _, ext = os.path.splitext(filepath)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
 netcdf4_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_netcdf4,
     guess_can_open=guess_can_open_netcdf4,
-    guess_can_write=guess_can_write,
+    guess_can_write=guess_can_write_netcdf4,
     dataset_writer=NetCDF4Writer,
 )
